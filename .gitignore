@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+
+# Test
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# 用户项目（每个视频项目独立）
+项目/
+素材/
+台本/
+设定/
+后期/
+发布/
+.video/
+
+# OS
+.DS_Store
+Thumbs.db

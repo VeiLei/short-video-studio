@@ -1,0 +1,14 @@
+{
+  "name": "short-video-studio",
+  "version": "0.1.0",
+  "description": "AI 短视频创作插件。5 个 skill 驱动 init→write→review→visual→finish。复用 short-drama-writer 后端。",
+  "author": "vei_ge",
+  "license": "MIT",
+  "skills": [
+    "skills/video-init",
+    "skills/video-write",
+    "skills/video-review",
+    "skills/video-visual",
+    "skills/video-finish"
+  ]
+}
