@@ -1,0 +1,19 @@
+{
+  "name": "short-video-studio-marketplace",
+  "description": "AI短视频创作 Claude Code 插件市场",
+  "owner": {
+    "name": "jwge"
+  },
+  "plugins": [
+    {
+      "name": "short-video-studio",
+      "description": "AI 短视频创作插件。5 个 skill 驱动 init→write→review→visual→finish。复用 short-drama-writer 后端。",
+      "version": "0.1.0",
+      "author": {
+        "name": "jwge"
+      },
+      "source": "./plugin",
+      "category": "productivity"
+    }
+  ]
+}

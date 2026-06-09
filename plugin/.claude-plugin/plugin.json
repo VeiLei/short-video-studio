@@ -1,0 +1,8 @@
+{
+  "name": "short-video-studio",
+  "version": "0.1.0",
+  "description": "AI 短视频创作插件。5 个 skill 驱动 init→write→review→visual→finish。复用 short-drama-writer 后端。",
+  "author": { "name": "jwge" },
+  "keywords": ["short-video", "ai-video", "claude-code", "skills"],
+  "license": "MIT"
+}
