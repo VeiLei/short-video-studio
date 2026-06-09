@@ -13,8 +13,9 @@ allowed-tools: Read Write Bash
 
 ## 前置条件
 
+- 当前工作目录是项目根目录（含 `.video/state.json`），以下用 `<PROJECT>` 代指
 - `.video/state.json` phase ∈ {visual, done}
-- `素材/视频/S*.mp4` 全部存在（或失败记录在 voice_index.json）
+- `<PROJECT>/素材/视频/S*.mp4` 全部存在（或失败记录在 voice_index.json）
 - ffmpeg 在 PATH 中（`ffmpeg -version`）
 - BGM 素材在 `plugin/assets/bgm/`（如无可跳过）
 
@@ -38,9 +39,9 @@ sys.path.insert(0, 'plugin/scripts')
 from subtitle_gen import parse_narration_to_srt, write_srt
 from pathlib import Path
 
-narration = Path('<project_root>/台本/口播词.md').read_text(encoding='utf-8')
+narration = Path('<PROJECT>/台本/口播词.md').read_text(encoding='utf-8')
 cues = parse_narration_to_srt(narration)
-out = Path('<project_root>/后期/字幕.srt')
+out = Path('<PROJECT>/后期/字幕.srt')
 write_srt(cues, path=str(out))
 print(f'Wrote {len(cues)} cues to {out}')
 "
@@ -50,14 +51,14 @@ print(f'Wrote {len(cues)} cues to {out}')
 
 ```bash
 # 创建 concat 列表
-cd <project_root>/素材/视频
+cd <PROJECT>/素材/视频
 ls S*.mp4 | sort > /tmp/concat_list.txt
 # 改写为绝对路径
-sed -i "s|^|<project_root>/素材/视频/|" /tmp/concat_list.txt
+sed -i "s|^|<PROJECT>/素材/视频/|" /tmp/concat_list.txt
 
 # Concat
 ffmpeg -f concat -safe 0 -i /tmp/concat_list.txt \
-  -c copy <project_root>/后期/终版_raw.mp4
+  -c copy <PROJECT>/后期/终版_raw.mp4
 ```
 
 > **Windows 注意**：用 `echo` 而非 `sed`，或用 PowerShell 改写。
@@ -65,21 +66,21 @@ ffmpeg -f concat -safe 0 -i /tmp/concat_list.txt \
 ### 步骤 4：烧字幕（可选）
 
 ```bash
-ffmpeg -i <project_root>/后期/终版_raw.mp4 \
-  -vf "subtitles=<project_root>/后期/字幕.srt:force_style='FontSize=24,PrimaryColour=&HFFFFFF,OutlineColour=&H000000,Outline=2'" \
-  <project_root>/后期/终版_subtitled.mp4
+ffmpeg -i <PROJECT>/后期/终版_raw.mp4 \
+  -vf "subtitles=<PROJECT>/后期/字幕.srt:force_style='FontSize=24,PrimaryColour=&HFFFFFF,OutlineColour=&H000000,Outline=2'" \
+  <PROJECT>/后期/终版_subtitled.mp4
 ```
 
 ### 步骤 5：叠加 BGM（可选）
 
 ```bash
 # 调节 BGM 音量为原视频音量的 20%（旁白为主）
-ffmpeg -i <project_root>/后期/终版_subtitled.mp4 \
+ffmpeg -i <PROJECT>/后期/终版_subtitled.mp4 \
   -i <bgm_path> \
   -filter_complex "[1:a]volume=0.2[bgm];[0:a][bgm]amix=inputs=2:duration=first[aout]" \
   -map 0:v -map "[aout]" \
   -c:v copy -c:a aac \
-  <project_root>/后期/终版_final.mp4
+  <PROJECT>/后期/终版_final.mp4
 ```
 
 如无 BGM 素材，跳过此步，复制 `终版_subtitled.mp4` 为 `终版_final.mp4`。
@@ -91,7 +92,7 @@ ffmpeg -i <project_root>/后期/终版_subtitled.mp4 \
 ```bash
 cd d:/PersonalFiles/Project_Space/short-drama-writer/backend
 .venv/Scripts/python -m app.cli video-cover \
-  --project <project_root> \
+  --project <PROJECT> \
   --name "封面" \
   --ratio "9:16" \
   --prompt "<基于视频主题 + 视觉风格生成的封面 prompt>"
@@ -105,7 +106,7 @@ cd d:/PersonalFiles/Project_Space/short-drama-writer/backend
 高对比度，吸睛，文字不遮挡。
 ```
 
-CLI 会把封面写到 `<project_root>/素材/封面/封面.png`。
+CLI 会把封面写到 `<PROJECT>/素材/封面/封面.png`。
 
 ### 步骤 7：导出发布包
 
@@ -117,14 +118,14 @@ sys.path.insert(0, 'plugin/scripts')
 from publish_export import export_publish_package
 
 export_publish_package(
-    project_root='<project_root>',
+    project_root='<PROJECT>',
     video_meta={
         'title': '<视频标题>',
         'description': '<视频描述>',
         'tags': ['<tag1>', '<tag2>', ...],
         'platforms': ['douyin', 'xiaohongshu']
     },
-    cover_source='<project_root>/素材/封面/封面.png'
+    cover_source='<PROJECT>/素材/封面/封面.png'
 )
 "
 ```
@@ -137,7 +138,7 @@ cd d:/PersonalFiles/Project_Space/short-video-studio
 import sys
 sys.path.insert(0, 'plugin/scripts')
 from state_manager import StateManager
-StateManager('<project_root>').set_phase('done')
+StateManager('<PROJECT>').set_phase('done')
 "
 ```
 
