@@ -13,7 +13,7 @@ allowed-tools: Read Write Bash AskUserQuestion
 
 ## 前置条件
 
-- 当前工作目录是项目父目录（脚本会自动 `mkdir`）
+- 用户当前在项目父目录（例如 `mkdir 我的视频 && cd 我的视频`，在此目录下启动 Claude Code）
 - Python 3.10+ 且 `plugin/scripts/` 可 import
 
 ## 工作流
@@ -30,7 +30,9 @@ allowed-tools: Read Write Bash AskUserQuestion
 6. **场景数量**：1-3（默认 1，最简单）
 7. **钩子策略**：从所选类型的模板中提取前 3 个选项
 
-### 步骤 2：调用 init_project 脚本
+### 步骤 2：调用 init_project 创建项目目录
+
+`video_id` 格式：`v_YYYY-MM-DD_NNN`，如 `v_2026-06-09_001`。
 
 ```bash
 cd d:/PersonalFiles/Project_Space/short-video-studio
@@ -47,11 +49,15 @@ print(project)
 "
 ```
 
-`video_id` 格式：`v_YYYY-MM-DD_NNN`，如 `v_2026-06-09_001`。
+**记下输出的绝对路径，设为 `PROJECT`。后续所有文件写入都必须在 `PROJECT/` 下。**
 
-### 步骤 3：套用类型模板生成 设定/
+例如输出 `D:\xxx\我的视频\v_2026-06-09_001`，则：
+- `设定/` → `D:\xxx\我的视频\v_2026-06-09_001\设定\`
+- `台本/` → `D:\xxx\我的视频\v_2026-06-09_001\台本\`
 
-读取 `plugin/templates/types/<type>.md`，把钩子策略、推荐结构写到 `设定/视频档案.md`：
+### 步骤 3：套用类型模板生成 设定/视频档案.md
+
+读取 `plugin/templates/types/<type>.md`，写入 `<PROJECT>/设定/视频档案.md`：
 
 ```markdown
 # <视频主题>
@@ -75,7 +81,7 @@ print(project)
 <让 Claude 根据类型 + 主题生成 5-10 行的风格描述>
 ```
 
-### 步骤 4：生成 设定/角色.md（如果出镜）
+### 步骤 4：生成 <PROJECT>/设定/角色.md（如果出镜）
 
 ```markdown
 # 角色
@@ -88,7 +94,7 @@ print(project)
 - **典型动作**：<3-5 个常用动作>
 ```
 
-### 步骤 5：生成 设定/场景.md
+### 步骤 5：生成 <PROJECT>/设定/场景.md
 
 ```markdown
 # 场景
@@ -101,7 +107,7 @@ print(project)
 - **氛围基调**：<专注/轻松/紧张>
 ```
 
-### 步骤 6：生成 设定/视觉风格.md
+### 步骤 6：生成 <PROJECT>/设定/视觉风格.md
 
 ```markdown
 # 视觉风格
@@ -122,6 +128,7 @@ print(project)
 
 ## 关键约束
 
+- **所有生成的文件必须写入 PROJECT 目录内**，不能写到当前工作目录
 - 不要在项目目录创建 .py 脚本，始终用 `plugin/scripts/` 里的模块
 - type 字段必须是白名单中的一个（参考 `video_prompt_schema.py`）
 - aspect_ratio 默认 9:16（除非用户明确要其他比例）

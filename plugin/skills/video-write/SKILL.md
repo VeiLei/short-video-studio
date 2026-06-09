@@ -13,19 +13,24 @@ allowed-tools: Read Write Bash AskUserQuestion
 
 ## 前置条件
 
-- `.video/state.json` 存在且 phase ∈ {init, write}
+- 当前工作目录是项目根目录（即包含 `.video/state.json` 的目录）
 - `设定/` 目录含 视频档案.md、角色.md、场景.md、视觉风格.md
+
+**项目目录确认**：读取 `.video/state.json` 获取 `video_id`，当前目录即为 `PROJECT`。
+所有读取和写入都相对于 `PROJECT/`。
 
 ## 工作流
 
-### 步骤 1：读 设定/
+### 步骤 1：确认项目目录并读 设定/
 
-读 `设定/视频档案.md` 拿到主题、类型、平台、时长、钩子策略、推荐结构。
-读 `设定/角色.md` 拿到角色外观/动作。
-读 `设定/场景.md` 拿到场景信息。
-读 `设定/视觉风格.md` 拿到整体风格。
+先用 `Read` 读 `.video/state.json` 确认当前目录是项目根目录，获取 `video_id`。
 
-### 步骤 2：生成 台本/口播词.md
+读 `<PROJECT>/设定/视频档案.md` 拿到主题、类型、平台、时长、钩子策略、推荐结构。
+读 `<PROJECT>/设定/角色.md` 拿到角色外观/动作。
+读 `<PROJECT>/设定/场景.md` 拿到场景信息。
+读 `<PROJECT>/设定/视觉风格.md` 拿到整体风格。
+
+### 步骤 2：生成 <PROJECT>/台本/口播词.md
 
 完整口播脚本。每段带时间轴：
 
@@ -58,7 +63,7 @@ allowed-tools: Read Write Bash AskUserQuestion
 
 时间轴精度 0.5s，段长 3-7s。Subtitle 解析器会读这个。
 
-### 步骤 3：生成 台本/分镜.md
+### 步骤 3：生成 <PROJECT>/台本/分镜.md
 
 每个 shot 一行：
 
@@ -75,7 +80,9 @@ allowed-tools: Read Write Bash AskUserQuestion
 
 总时长应与口播词的总时长一致。
 
-### 步骤 4：生成 台本/视频提示词.json
+### 步骤 4：生成 <PROJECT>/台本/视频提示词.json
+
+**注意**：`<PROJECT>` 是项目根目录的绝对路径（即包含 `.video/state.json` 的目录）。
 
 ```python
 import json
@@ -83,7 +90,7 @@ import sys
 from pathlib import Path
 
 # 加载 schema
-sys.path.insert(0, str(Path("<plugin_root>/plugin/scripts").resolve()))
+sys.path.insert(0, str(Path("d:/PersonalFiles/Project_Space/short-video-studio/plugin/scripts").resolve()))
 from video_prompt_schema import validate_video_prompt
 
 data = {
@@ -117,8 +124,8 @@ data = {
 # 校验
 validate_video_prompt(data)
 
-# 写入
-Path("<project_root>/台本/视频提示词.json").write_text(
+# 写入（注意：路径是 <PROJECT>/台本/视频提示词.json）
+Path("<PROJECT>/台本/视频提示词.json").write_text(
     json.dumps(data, ensure_ascii=False, indent=2),
     encoding="utf-8"
 )
@@ -132,7 +139,7 @@ cd d:/PersonalFiles/Project_Space/short-video-studio
 import sys
 sys.path.insert(0, 'plugin/scripts')
 from state_manager import StateManager
-StateManager('<project_root>').set_phase('write')
+StateManager('<PROJECT>').set_phase('write')
 "
 ```
 
