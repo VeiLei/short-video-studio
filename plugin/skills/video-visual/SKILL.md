@@ -133,11 +133,13 @@ CLI prop-ref --project <PROJECT> --name <道具名> --prompt "..." --scene <关�
 
 ---
 
-## 阶段3：逐 shot 生成视频
+## 阶段3：按生成段逐段生成视频
+
+> **核心变更**：`video-write` 已把相邻同场景 shot 合并为生成段（`segment_id`）。每段用一个 prompt 生成一段连续视频（Seedance 自己处理 `镜头1→镜头2` 转场），再在 `video-finish` 阶段拼接各段。
 
 ### 3a. 素材配置策略（官方推荐 4-5 个素材）
 
-每个 shot 调用 Seedance 时，参考素材按角色分组：
+每个段调用 Seedance 时，参考素材按角色分组：
 - **角色锚定**：大头照 1 张 + 全身照 1 张（锁定角色外观）
 - **场景定调**：取景框 1 张 或 场景全景图 1 张（锁定环境与风格）
 - 总计 3-4 张图，不用满素材上限
@@ -151,17 +153,23 @@ mkdir -p <PROJECT>/提示词
 cp <PROJECT>/台本/视频提示词.json <PROJECT>/提示词/第0001集-视频提示词.json
 ```
 
-### 3c. 调用生成
+### 3c. 按段调用（非按 shot）
 
-对每个 shot 调用（`--duration` 从 JSON 的 `video_params.duration_sec` 读取，**不要写死**）：
+遍历 `<PROJECT>/台本/视频提示词.json`，提取**每段首 shot**（`prompt` 非空的那个）：
 
 ```bash
-CLI video-generate --project <PROJECT> --episode 0001 --shot-id <shot_id> --scene <场景名> --frame-id <frame_id>
+# seg1：实验室场景，S01+S02+S03 三个镜头合并，总时长 13s
+CLI video-generate --project <PROJECT> --episode 0001 --shot-id S01 --scene 实验室
+
+# seg2：走廊场景，S04+S05 两个镜头合并，总时长 9s
+CLI video-generate --project <PROJECT> --episode 0001 --shot-id S04 --scene 走廊
 ```
 
-> **MVP 阶段**：先不传 `--mode narration`。如果用户明确要"知识科普型"旁白视频，再加 `--mode narration`。
+CLI 自动从 JSON 读取该 shot 的 `prompt`（含 `镜头1/镜头2...` 串联描述）和 `duration_sec`（整段总时长）。同段后续 shot（prompt 为空）跳过不调。
 
-CLI 自动从 JSON 读取 duration/ratio/refs → submit → poll → download 到 `<PROJECT>/素材/视频/`。
+> **段数大幅减少**：原本 12 个 shot → 12 次调用；现在同场景合并 → 可能只需 3-5 次调用。
+
+CLI 生成后自动下载到 `<PROJECT>/素材/视频/`，文件以 `{shot_id}.mp4` 命名，`video-finish` 阶段按 shot 顺序拼接各段。
 
 ---
 

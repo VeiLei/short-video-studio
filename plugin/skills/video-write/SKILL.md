@@ -70,7 +70,33 @@ allowed-tools: Read Write Bash AskUserQuestion
 
 总时长应与口播词的总时长一致。
 
-### 步骤 4：生成 <PROJECT>/台本/视频提示词.json
+### 步骤 4：分镜合并为生成段
+
+Seedance 2.0 在同一 prompt 中用 `镜头1`、`镜头2` 标记多个连续镜头，模型自己处理转场——比 ffmpeg 硬拼接流畅。
+
+**合并规则**：
+- 同一场景 + 连续时间 → 合并为一个生成段
+- 累加时长 ≤ 15 秒（Seedance 单次上限）
+- 场景切换 / 时间跳跃 / 角色变化 → 拆分为新段
+
+在分镜表上标注段号：
+
+```markdown
+# 分镜
+
+| shot_id | 时长 | 场景 | 角色 | 机位 | 动作 | 段 |
+|---|---|---|---|---|---|---|
+| S01 | 3.5s | 实验室 | 小明 | 中景 | 面对镜头微微点头 | seg1 |
+| S02 | 4.5s | 实验室 | 小明 | 近景 | 拿起试管观察        | seg1 |
+| S03 | 5.0s | 实验室 | 小明 | 特写 | 手指轻点桌面        | seg1 |
+| S04 | 4.0s | 走廊   | 小明 | 全景 | 快步走出实验室      | seg2 |
+| S05 | 5.0s | 走廊   | 小明 | 中景 | 与同事交谈          | seg2 |
+...
+```
+
+> seg1 三个镜头同场景，总时长 13s ≤ 15s → 一个 prompt 生成。seg2 场景变了，拆开。
+
+### 步骤 5：生成 <PROJECT>/台本/视频提示词.json
 
 **prompt 字段使用 Seedance 2.0 官方公式**：
 
@@ -78,14 +104,15 @@ allowed-tools: Read Write Bash AskUserQuestion
 精准主体 + 动作细节 + 场景环境 + 光影色调 + 镜头运镜 + 视觉风格 + 画质 + 约束条件
 ```
 
-**锚点锁定规则**：从 `<PROJECT>/设定/角色.md` 取每个角色的锚点词（发型发色、脸型特征、标志配饰、体型身高、着装基底），**在全部 shot 的 prompt 中一字不改原样粘贴**。只换动作、镜头、场景三部分。
+**段内合并**：同一个 segment 的多个 shot，在一个 prompt 中用 `镜头1`、`镜头2`... 串联，Seedance 自己处理镜头间转场。场景切换处自然分段。
+每个 shot 记录自己的 `segment_id` 和 `narration`，同段 shot 共享一个合并的 `prompt`。
+
+**锚点锁定规则**：从 `<PROJECT>/设定/角色.md` 取每个角色的锚点词（发型发色、脸型特征、标志配饰、体型身高、着装基底），**在全部 shot 的 prompt 中一字不改原样粘贴**。
 
 **动作描述规则**（官方要求）：
 - 肢体细化 + 程度量化：缓慢抬手、微微低头、手指轻敲桌面
 - 情绪外化：不说"很紧张"，说"频繁看手表、呼吸急促"
 - 优先低缓连贯小动作，规避狂奔大跳剧烈翻滚
-
-**镜头用 `镜头1`、`镜头2` 标记**（官方推荐），不写精确时间戳。每个镜头内：运镜 → 主体动作 → 空间变化。一个镜头只一种运镜方式。
 
 **符号规范**：音效 `<>`、台词 `{}`、字幕 `【】`
 
@@ -109,6 +136,7 @@ data = {
     "shots": [
         {
             "shot_id": "S01",
+            "segment_id": "seg1",
             "order": 1,
             "scene": "实验室",
             "frame_type": "establishing",
@@ -117,36 +145,82 @@ data = {
             "outfits": ["白大褂"],
             "prompt": (
                 "镜头1：中景，缓慢推镜，黑色短发偏分方脸浓眉银领针的男研究员穿着白大褂深灰衬衫，"
-                "面对镜头微微点头，双手自然放在实验台上，实验室背景。"
-                "柔和晨窗光，半写实CG渲染，低饱和清新色调。"
+                "面对镜头微微点头，双手自然放在实验台上。"
+                "镜头2：近景，轻微推入，黑色短发偏分方脸浓眉银领针的男研究员穿着白大褂深灰衬衫，"
+                "右手拿起试管对着灯光观察，表情专注。"
+                "镜头3：特写，固定镜头，手指轻点桌面，试管放在一旁。"
+                "实验室背景，柔和晨窗光，半写实CG渲染，低饱和清新色调。"
                 "高清电影质感，保持无字幕，不要生成Logo，不要生成水印。"
             ),
             "video_params": {
-                "duration_sec": 6,
-                "aspect_ratio": "9:16",
-                "camera": "中景",
-                "motion": "缓慢推镜"
+                "duration_sec": 13,
+                "aspect_ratio": "9:16"
             }
         },
         {
             "shot_id": "S02",
+            "segment_id": "seg1",
             "order": 2,
             "scene": "实验室",
             "frame_type": "close_up",
             "narration": "<口播词下一段>",
             "characters": ["小明"],
             "outfits": ["白大褂"],
+            "prompt": "",  # 同段复用 seg1 的 prompt，此处留空
+            "video_params": {
+                "duration_sec": 0,
+                "aspect_ratio": "9:16"
+            }
+        },
+        {
+            "shot_id": "S03",
+            "segment_id": "seg1",
+            "order": 3,
+            "scene": "实验室",
+            "frame_type": "close_up",
+            "narration": "<口播词下一段>",
+            "characters": ["小明"],
+            "outfits": ["白大褂"],
+            "prompt": "",
+            "video_params": {
+                "duration_sec": 0,
+                "aspect_ratio": "9:16"
+            }
+        },
+        {
+            "shot_id": "S04",
+            "segment_id": "seg2",
+            "order": 4,
+            "scene": "走廊",
+            "frame_type": "establishing",
+            "narration": "<口播词下一段>",
+            "characters": ["小明"],
+            "outfits": ["白大褂"],
             "prompt": (
-                "镜头2：近景，轻微推入，黑色短发偏分方脸浓眉银领针的男研究员穿着白大褂深灰衬衫，"
-                "右手拿起试管对着灯光观察，表情专注，实验室背景。"
-                "柔和晨窗光，半写实CG渲染，低饱和清新色调。"
+                "镜头1：全景，平稳横移，黑色短发偏分方脸浓眉银领针的男研究员穿着白大褂深灰衬衫，"
+                "快步走出实验室进入走廊。"
+                "镜头2：中景，固定镜头，与走廊里的同事停下交谈，表情认真。"
+                "走廊白墙日光灯，写实风格，微冷色调。"
                 "高清电影质感，保持无字幕，不要生成Logo，不要生成水印。"
             ),
             "video_params": {
-                "duration_sec": 5,
-                "aspect_ratio": "9:16",
-                "camera": "近景",
-                "motion": "轻微推入"
+                "duration_sec": 9,
+                "aspect_ratio": "9:16"
+            }
+        },
+        {
+            "shot_id": "S05",
+            "segment_id": "seg2",
+            "order": 5,
+            "scene": "走廊",
+            "frame_type": "medium",
+            "narration": "<口播词下一段>",
+            "characters": ["小明"],
+            "outfits": ["白大褂"],
+            "prompt": "",
+            "video_params": {
+                "duration_sec": 0,
+                "aspect_ratio": "9:16"
             }
         }
     ]
@@ -160,7 +234,9 @@ Path("<PROJECT>/台本/视频提示词.json").write_text(
 )
 ```
 
-### 步骤 5：更新 state
+> **段结构说明**：`segment_id` 相同的 shot 属于同一生成段。每段第一个 shot 的 `prompt` 包含完整的 `镜头1/镜头2...` 串联描述、场景、风格、约束词；同段后续 shot 的 `prompt` 留空。`video_params.duration_sec` 为**整段**总时长（≤ 15s），非首 shot 填 0。
+
+### 步骤 6：更新 state
 
 ```bash
 cd d:/PersonalFiles/Project_Space/short-video-studio
