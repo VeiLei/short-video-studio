@@ -84,12 +84,23 @@ allowed-tools: Read Write Bash AskUserQuestion
 
 **注意**：`<PROJECT>` 是项目根目录的绝对路径（即包含 `.video/state.json` 的目录）。
 
+**prompt 字段必须使用五层填空式结构**（Seedance 2.0 验证最佳实践）：
+
+```
+主体: [角色锚点词原样复制] + [着装]
+动作: [一个动词短语，现在时]
+镜头: [景别] + [运动] + [角度]，[焦距感受]
+风格: [视觉风格锚点]，[布光]，[色调]
+约束: [排除项]，稳定约束词
+```
+
+**锚点锁定规则**：从 `<PROJECT>/设定/角色.md` 取每个角色的锚点词，**在全部 shot 的 prompt 中一字不改原样粘贴**。只换动作、镜头、风格三行。
+
 ```python
 import json
 import sys
 from pathlib import Path
 
-# 加载 schema
 sys.path.insert(0, str(Path("d:/PersonalFiles/Project_Space/short-video-studio/plugin/scripts").resolve()))
 from video_prompt_schema import validate_video_prompt
 
@@ -109,27 +120,54 @@ data = {
             "narration": "<从口播词对应段复制>",
             "characters": ["小明"],
             "outfits": ["白大褂"],
-            "prompt": "实验室场景，白大褂的小明面对镜头，略带思考，<视觉风格>. 色调冷暖混合.",
+            "prompt": (
+                "主体: 黑色短发齐刘海，圆脸左颊小痣，细框眼镜，金圈耳环，白大褂浅蓝衬衫，中等身材。"
+                "动作: 面对镜头微微点头，双手自然放在实验台上。"
+                "镜头: 中景，缓慢推入，眼平高度，35mm感。"
+                "风格: 柔和晨窗光，低饱和色调，半写实CG渲染，知识科普质感。"
+                "约束: 无跳跃变焦，无额外角色，保持角色特征一致，画面连贯流畅。"
+            ),
             "video_params": {
                 "duration_sec": 6,
                 "aspect_ratio": "9:16",
-                "camera": "中景正面",
-                "motion": "说话动作"
+                "camera": "中景",
+                "motion": "缓慢推入"
+            }
+        },
+        {
+            "shot_id": "S02",
+            "order": 2,
+            "scene": "实验室",
+            "frame_type": "close_up",
+            "narration": "<口播词下一段>",
+            "characters": ["小明"],
+            "outfits": ["白大褂"],
+            "prompt": (
+                "主体: 黑色短发齐刘海，圆脸左颊小痣，细框眼镜，金圈耳环，白大褂浅蓝衬衫，中等身材。"
+                "动作: 右手拿起试管对着灯光观察，表情专注。"
+                "镜头: 近景特写，轻微推入，略高于眼平，85mm感。"
+                "风格: 柔和晨窗光，低饱和色调，半写实CG渲染，知识科普质感。"
+                "约束: 无跳跃变焦，无额外角色，保持角色特征一致，画面连贯流畅。"
+            ),
+            "video_params": {
+                "duration_sec": 5,
+                "aspect_ratio": "9:16",
+                "camera": "近景",
+                "motion": "轻微推入"
             }
         }
-        # ... 其他 shot
     ]
 }
 
-# 校验
 validate_video_prompt(data)
 
-# 写入（注意：路径是 <PROJECT>/台本/视频提示词.json）
 Path("<PROJECT>/台本/视频提示词.json").write_text(
     json.dumps(data, ensure_ascii=False, indent=2),
     encoding="utf-8"
 )
 ```
+
+> **五层结构要点**：主体行全镜头原样锁定；动作行每镜头只一个动词；镜头行指定景别+运动+焦距感；风格行固定布光和色调；约束行包含排除项+稳定约束词。短 prompt 比长文效果好，控制在 60 词以内。
 
 ### 步骤 5：更新 state
 
@@ -145,8 +183,12 @@ StateManager('<PROJECT>').set_phase('write')
 
 ## 关键约束
 
+- **锚点锁定**：角色锚点词从 设定/角色.md 原样复制到每个 shot prompt 的主体行，一字不改
+- **五层结构**：每个 shot prompt 严格按 主体→动作→镜头→风格→约束 结构，控制 60 词以内
+- **一镜一动**：每个镜头只一个运动动词，复合运动拆成多个 shot
+- **稳定约束词**：每个 prompt 末尾加"保持角色特征一致，画面连贯流畅"
+- **排除项**：每镜头选 3-5 个排除项（如"无跳跃变焦、无额外角色、无文字叠加"）
 - 提示词应包含 视觉风格.md 中的关键词
-- 角色引用应与 设定/角色.md 一致
 - 场景引用应与 设定/场景.md 一致
 - 视频总时长应与 设定/视频档案.md 一致
 - 必须在写完文件后调用 `validate_video_prompt` 校验
